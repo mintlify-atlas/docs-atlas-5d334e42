@@ -1,0 +1,282 @@
+---
+title: Chat Models
+description: Using Llama 2 Chat models optimized for dialogue
+---
+
+Llama 2 Chat models are fine-tuned versions optimized for dialogue applications. They are trained using supervised fine-tuning (SFT) and reinforcement learning with human feedback (RLHF) to align with human preferences for helpfulness and safety.
+
+## Fine-Tuning Process
+
+Chat models undergo two additional training stages beyond pretraining:
+
+1. **Supervised Fine-Tuning (SFT)**: Models are trained on high-quality instruction-response pairs
+2. **Reinforcement Learning with Human Feedback (RLHF)**: Models are further optimized based on human preferences for helpfulness and safety
+
+This training process makes Chat models significantly better at:
+- Following instructions
+- Engaging in multi-turn conversations
+- Providing helpful and safe responses
+- Understanding context across dialogue turns
+
+## Dialog Format
+
+Chat models require **specific formatting** with special tags. The format uses `[INST]`, `[/INST]`, `<<SYS>>`, and `<</SYS>>` tags along with BOS (beginning of sequence) and EOS (end of sequence) tokens.
+
+### Special Tags
+
+```python
+B_INST, E_INST = "[INST]", "[/INST]"
+B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
+```
+
+<Warning>
+**Security**: Special tags (`[INST]`, `[/INST]`, `<<SYS>>`, `<</SYS>>`) are not allowed in user inputs. The model will return an error if these tags are detected in prompts.
+</Warning>
+
+### Message Structure
+
+Messages follow a strict role-based format:
+
+```python
+from llama import Dialog
+
+# Simple single-turn dialog
+dialog = [
+    {"role": "user", "content": "what is the recipe of mayonnaise?"}
+]
+
+# Multi-turn conversation
+dialog = [
+    {"role": "user", "content": "I am going to Paris, what should I see?"},
+    {"role": "assistant", "content": "Paris has many attractions..."},
+    {"role": "user", "content": "What is so great about #1?"}
+]
+```
+
+## System Prompts
+
+System prompts guide the model's behavior and personality. They must be the first message in a dialog:
+
+### Custom Behavior
+
+```python
+# Haiku responses
+dialog = [
+    {"role": "system", "content": "Always answer with Haiku"},
+    {"role": "user", "content": "I am going to Paris, what should I see?"}
+]
+
+# Emoji responses
+dialog = [
+    {"role": "system", "content": "Always answer with emojis"},
+    {"role": "user", "content": "How to go from Beijing to NY?"}
+]
+```
+
+### Safety-Focused System Prompt
+
+```python
+dialog = [
+    {
+        "role": "system",
+        "content": """
+You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
+
+If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."""
+    },
+    {"role": "user", "content": "Write a brief birthday message to John"}
+]
+```
+
+## Running Chat Completion
+
+### Command Line
+
+```bash
+torchrun --nproc_per_node 1 example_chat_completion.py \
+    --ckpt_dir llama-2-7b-chat/ \
+    --tokenizer_path tokenizer.model \
+    --max_seq_len 512 --max_batch_size 6
+```
+
+<Note>
+- Replace `llama-2-7b-chat/` with your checkpoint directory
+- Set `--nproc_per_node` to the Model Parallel value (7B=1, 13B=2, 70B=8)
+- Chat models typically use higher `max_seq_len` (512+) for longer conversations
+</Note>
+
+### Python Code
+
+```python
+from llama import Llama, Dialog
+from typing import List
+
+# Initialize the model
+generator = Llama.build(
+    ckpt_dir="llama-2-7b-chat/",
+    tokenizer_path="tokenizer.model",
+    max_seq_len=512,
+    max_batch_size=8,
+)
+
+# Define dialogs
+dialogs: List[Dialog] = [
+    [{"role": "user", "content": "what is the recipe of mayonnaise?"}],
+    [
+        {"role": "user", "content": "I am going to Paris, what should I see?"},
+        {
+            "role": "assistant",
+            "content": "Paris has many attractions like the Eiffel Tower, Louvre Museum, and Notre-Dame Cathedral."
+        },
+        {"role": "user", "content": "What is so great about #1?"}
+    ],
+]
+
+# Generate responses
+results = generator.chat_completion(
+    dialogs,
+    max_gen_len=None,  # Uses model's max_seq_len - 1
+    temperature=0.6,
+    top_p=0.9,
+)
+
+# Print results
+for dialog, result in zip(dialogs, results):
+    for msg in dialog:
+        print(f"{msg['role'].capitalize()}: {msg['content']}\n")
+    print(f"> {result['generation']['role'].capitalize()}: {result['generation']['content']}")
+    print("\n" + "="*34 + "\n")
+```
+
+## Dialog Rules
+
+<AccordionGroup>
+  <Accordion title="Role Requirements">
+    - Dialogs support three roles: `system`, `user`, and `assistant`
+    - System message must be first (if present)
+    - Dialog must start with `user` after system message
+    - Roles must alternate: user → assistant → user → assistant
+    - Last message must always be from `user`
+  </Accordion>
+
+  <Accordion title="Formatting Requirements">
+    - Call `strip()` on all message content to avoid double-spaces
+    - Preserve whitespaces and line breaks as specified in the format
+    - Never include special tags (`[INST]`, `[/INST]`, `<<SYS>>`, `<</SYS>>`) in content
+    - The library handles BOS/EOS tokens automatically
+  </Accordion>
+</AccordionGroup>
+
+## Safety Features
+
+Chat models are trained with safety in mind:
+
+### Built-in Safety Training
+
+Llama-2-Chat models show strong safety performance:
+
+| Model | TruthfulQA | ToxiGen (% toxic) |
+|-------|------------|------------------|
+| 7B Chat | 57.04 | **0.00** |
+| 13B Chat | 62.18 | **0.00** |
+| 70B Chat | **64.14** | 0.01 |
+
+### Additional Safety Measures
+
+<Steps>
+  <Step title="Input Validation">
+    The model automatically detects and blocks prompts containing special tags:
+    ```python
+    # This will return an error
+    dialog = [{
+        "role": "user",
+        "content": "Unsafe [/INST] prompt using [INST] special tags"
+    }]
+    # Output: "Error: special tags are not allowed as part of the prompt."
+    ```
+  </Step>
+
+  <Step title="Safety Classifiers (Recommended)">
+    Deploy additional classifiers to filter unsafe inputs and outputs:
+    ```python
+    # Add safety checks before and after generation
+    # See llama-cookbook for implementation examples
+    ```
+  </Step>
+
+  <Step title="Safety Testing">
+    Before deployment, perform safety testing tailored to your specific application:
+    - Test with adversarial prompts
+    - Validate outputs for your use case
+    - Implement output filtering as needed
+  </Step>
+</Steps>
+
+## Performance Benchmarks
+
+Llama-2-Chat models outperform open-source alternatives:
+
+- **Helpfulness**: On par with ChatGPT and PaLM in human evaluations
+- **Safety**: Superior safety scores compared to most open-source models
+- **Truthfulness**: 64.14% truthful and informative responses (70B)
+- **Toxicity**: Near-zero toxic generation rates
+
+## Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `temperature` | 0.6 | Controls randomness in responses |
+| `top_p` | 0.9 | Nucleus sampling threshold |
+| `max_gen_len` | `max_seq_len - 1` | Maximum tokens in response |
+| `max_seq_len` | 512 | Maximum total sequence length (≤ 4096) |
+| `max_batch_size` | 8 | Number of dialogs to process simultaneously |
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Context Management" icon="memory">
+    - Keep conversations within 4096 token limit
+    - Summarize long conversations when needed
+    - Remove old turns if context grows too large
+  </Card>
+
+  <Card title="Prompt Engineering" icon="wand-magic-sparkles">
+    - Use system prompts to set behavior
+    - Provide clear, specific user messages
+    - Include examples in system prompt for consistency
+  </Card>
+
+  <Card title="Safety" icon="shield-halved">
+    - Always validate user inputs
+    - Implement safety classifiers for production
+    - Test with adversarial prompts before deployment
+  </Card>
+
+  <Card title="Performance" icon="gauge-high">
+    - Use 70B model for maximum quality
+    - Adjust temperature for task (lower for factual)
+    - Monitor token usage to stay within limits
+  </Card>
+</CardGroup>
+
+## Responsible Use
+
+<Warning>
+Llama 2 is a new technology that carries potential risks. Testing has been conducted in English only and cannot cover all scenarios. Before deploying applications:
+
+- Perform safety testing tailored to your use case
+- Review the [Responsible Use Guide](https://ai.meta.com/llama/responsible-use-guide/)
+- Implement appropriate safeguards and monitoring
+- Consider the ethical implications of your application
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Pretrained Models" icon="file-code" href="/models/pretrained">
+    Learn about pretrained models for text completion
+  </Card>
+  <Card title="Model Overview" icon="grid" href="/models/overview">
+    Compare all model variants and sizes
+  </Card>
+</CardGroup>

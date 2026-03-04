@@ -1,0 +1,218 @@
+---
+title: Type Definitions
+description: Type definitions for Llama 2 generation API
+---
+
+## Role
+
+A Literal type defining valid message roles in chat conversations.
+
+<ResponseField name="Role" type="Literal['system', 'user', 'assistant']">
+  Valid role values for messages in a chat dialog. Must be one of:
+  - `"system"` - System-level instructions
+  - `"user"` - User messages
+  - `"assistant"` - Assistant responses
+</ResponseField>
+
+### Example
+
+```python
+from llama.generation import Role
+
+# Valid roles
+role: Role = "user"
+role: Role = "assistant"
+role: Role = "system"
+```
+
+## Message
+
+A TypedDict representing a single message in a chat conversation.
+
+<ResponseField name="role" type="Role" required>
+  The role of the message sender (system, user, or assistant)
+</ResponseField>
+
+<ResponseField name="content" type="str" required>
+  The text content of the message
+</ResponseField>
+
+### Example
+
+```python
+from llama.generation import Message
+
+message: Message = {
+    "role": "user",
+    "content": "What is the capital of France?"
+}
+
+system_message: Message = {
+    "role": "system",
+    "content": "You are a helpful assistant."
+}
+```
+
+## CompletionPrediction
+
+A TypedDict representing the result of a text completion operation.
+
+<ResponseField name="generation" type="str" required>
+  The generated text completion
+</ResponseField>
+
+<ResponseField name="tokens" type="List[str]">
+  List of decoded tokens in the generation (only present when `logprobs=True`)
+</ResponseField>
+
+<ResponseField name="logprobs" type="List[float]">
+  Log probabilities for each generated token (only present when `logprobs=True`)
+</ResponseField>
+
+### Example
+
+```python
+from llama.generation import CompletionPrediction
+
+# Basic completion (logprobs=False)
+completion: CompletionPrediction = {
+    "generation": "The capital of France is Paris."
+}
+
+# Completion with token details (logprobs=True)
+completion_detailed: CompletionPrediction = {
+    "generation": "The capital of France is Paris.",
+    "tokens": ["The", " capital", " of", " France", " is", " Paris", "."],
+    "logprobs": [-0.1, -0.05, -0.02, -0.3, -0.01, -0.2, -0.15]
+}
+```
+
+### Usage in Method Signatures
+
+```python
+def text_completion(
+    self,
+    prompts: List[str],
+    temperature: float = 0.6,
+    top_p: float = 0.9,
+    max_gen_len: Optional[int] = None,
+    logprobs: bool = False,
+    echo: bool = False,
+) -> List[CompletionPrediction]:
+    ...
+```
+
+## ChatPrediction
+
+A TypedDict representing the result of a chat completion operation.
+
+<ResponseField name="generation" type="Message" required>
+  The generated assistant message response
+</ResponseField>
+
+<ResponseField name="tokens" type="List[str]">
+  List of decoded tokens in the generation (only present when `logprobs=True`)
+</ResponseField>
+
+<ResponseField name="logprobs" type="List[float]">
+  Log probabilities for each generated token (only present when `logprobs=True`)
+</ResponseField>
+
+### Example
+
+```python
+from llama.generation import ChatPrediction
+
+# Basic chat completion (logprobs=False)
+chat_result: ChatPrediction = {
+    "generation": {
+        "role": "assistant",
+        "content": "The capital of France is Paris."
+    }
+}
+
+# Chat completion with token details (logprobs=True)
+chat_result_detailed: ChatPrediction = {
+    "generation": {
+        "role": "assistant",
+        "content": "The capital of France is Paris."
+    },
+    "tokens": ["The", " capital", " of", " France", " is", " Paris", "."],
+    "logprobs": [-0.1, -0.05, -0.02, -0.3, -0.01, -0.2, -0.15]
+}
+```
+
+### Usage in Method Signatures
+
+```python
+def chat_completion(
+    self,
+    dialogs: List[Dialog],
+    temperature: float = 0.6,
+    top_p: float = 0.9,
+    max_gen_len: Optional[int] = None,
+    logprobs: bool = False,
+) -> List[ChatPrediction]:
+    ...
+```
+
+## Dialog
+
+A type alias representing a complete conversation dialog.
+
+<ResponseField name="Dialog" type="List[Message]">
+  A list of Message objects forming a conversation. Messages should alternate between user and assistant roles, optionally starting with a system message.
+</ResponseField>
+
+### Example
+
+```python
+from llama.generation import Dialog
+
+# Simple user-assistant dialog
+dialog: Dialog = [
+    {"role": "user", "content": "What is the capital of France?"},
+    {"role": "assistant", "content": "The capital of France is Paris."},
+    {"role": "user", "content": "What about Germany?"}
+]
+
+# Dialog with system message
+dialog_with_system: Dialog = [
+    {"role": "system", "content": "You are a geography expert."},
+    {"role": "user", "content": "What is the capital of France?"},
+    {"role": "assistant", "content": "The capital of France is Paris."},
+    {"role": "user", "content": "What about Germany?"}
+]
+```
+
+### Usage in Method Signatures
+
+```python
+def chat_completion(
+    self,
+    dialogs: List[Dialog],
+    temperature: float = 0.6,
+    top_p: float = 0.9,
+    max_gen_len: Optional[int] = None,
+    logprobs: bool = False,
+) -> List[ChatPrediction]:
+    ...
+```
+
+## Type Relationships
+
+The types work together to support both text completion and chat completion workflows:
+
+```python
+# Text completion flow
+prompts: List[str] = ["Once upon a time"]
+results: List[CompletionPrediction] = llama.text_completion(prompts)
+
+# Chat completion flow
+dialogs: List[Dialog] = [[
+    {"role": "user", "content": "Hello!"}
+]]
+results: List[ChatPrediction] = llama.chat_completion(dialogs)
+```
+
+All types are defined in `llama/generation.py:22-42` and are designed to provide type safety for the Llama 2 generation API.

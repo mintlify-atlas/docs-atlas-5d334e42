@@ -1,0 +1,175 @@
+---
+title: "Tokenizer"
+description: "Tokenizer class for encoding and decoding text using SentencePiece."
+---
+
+## Overview
+
+The `Tokenizer` class handles tokenizing and encoding/decoding text using SentencePiece. It provides methods to convert between text strings and token IDs for use with Llama 2 models.
+
+## Class Definition
+
+```python
+class Tokenizer:
+    """tokenizing and encoding/decoding text using SentencePiece."""
+```
+
+## Methods
+
+### \_\_init\_\_
+
+```python
+def __init__(self, model_path: str)
+```
+
+Initializes the Tokenizer with a SentencePiece model.
+
+<ParamField path="model_path" type="str" required>
+  The path to the SentencePiece model file.
+</ParamField>
+
+**Raises:**
+- `AssertionError`: If the model_path does not point to a valid file.
+
+**Attributes:**
+
+After initialization, the Tokenizer instance has the following attributes:
+
+- `sp_model` (SentencePieceProcessor): The loaded SentencePiece processor.
+- `n_words` (int): Vocabulary size.
+- `bos_id` (int): Beginning-of-sequence token ID.
+- `eos_id` (int): End-of-sequence token ID.
+- `pad_id` (int): Padding token ID.
+
+**Example:**
+
+```python
+from llama.tokenizer import Tokenizer
+
+# Initialize tokenizer
+tokenizer = Tokenizer(model_path="/path/to/tokenizer.model")
+
+print(f"Vocabulary size: {tokenizer.n_words}")
+print(f"BOS token ID: {tokenizer.bos_id}")
+print(f"EOS token ID: {tokenizer.eos_id}")
+print(f"PAD token ID: {tokenizer.pad_id}")
+```
+
+---
+
+### encode
+
+```python
+def encode(self, s: str, bos: bool, eos: bool) -> List[int]
+```
+
+Encodes a string into a list of token IDs.
+
+<ParamField path="s" type="str" required>
+  The input string to be encoded.
+</ParamField>
+
+<ParamField path="bos" type="bool" required>
+  Whether to prepend the beginning-of-sequence token.
+</ParamField>
+
+<ParamField path="eos" type="bool" required>
+  Whether to append the end-of-sequence token.
+</ParamField>
+
+<ResponseField name="return" type="List[int]">
+  A list of token IDs representing the encoded string.
+</ResponseField>
+
+**Raises:**
+- `AssertionError`: If the input `s` is not a string.
+
+**Example:**
+
+```python
+from llama.tokenizer import Tokenizer
+
+tokenizer = Tokenizer(model_path="/path/to/tokenizer.model")
+
+# Encode with BOS token
+text = "Hello, world!"
+tokens = tokenizer.encode(text, bos=True, eos=False)
+print(f"Tokens with BOS: {tokens}")
+
+# Encode with both BOS and EOS tokens
+tokens = tokenizer.encode(text, bos=True, eos=True)
+print(f"Tokens with BOS and EOS: {tokens}")
+
+# Encode without special tokens
+tokens = tokenizer.encode(text, bos=False, eos=False)
+print(f"Tokens without special tokens: {tokens}")
+```
+
+---
+
+### decode
+
+```python
+def decode(self, t: List[int]) -> str
+```
+
+Decodes a list of token IDs into a string.
+
+<ParamField path="t" type="List[int]" required>
+  The list of token IDs to be decoded.
+</ParamField>
+
+<ResponseField name="return" type="str">
+  The decoded string.
+</ResponseField>
+
+**Example:**
+
+```python
+from llama.tokenizer import Tokenizer
+
+tokenizer = Tokenizer(model_path="/path/to/tokenizer.model")
+
+# Encode and decode
+original_text = "The quick brown fox jumps over the lazy dog."
+tokens = tokenizer.encode(original_text, bos=True, eos=True)
+print(f"Tokens: {tokens}")
+
+decoded_text = tokenizer.decode(tokens)
+print(f"Decoded: {decoded_text}")
+
+# Decode partial tokens
+partial_tokens = tokens[:5]
+partial_text = tokenizer.decode(partial_tokens)
+print(f"Partial text: {partial_text}")
+```
+
+## Usage Example
+
+Here's a complete example showing typical tokenizer usage:
+
+```python
+from llama.tokenizer import Tokenizer
+
+# Initialize tokenizer
+tokenizer = Tokenizer(model_path="/path/to/tokenizer.model")
+
+# Prepare text for model input
+input_text = "What is the meaning of life?"
+
+# Encode with BOS, without EOS (for prompts)
+prompt_tokens = tokenizer.encode(input_text, bos=True, eos=False)
+print(f"Prompt tokens: {prompt_tokens}")
+
+# After generation, decode tokens back to text
+generated_tokens = [1, 1724, 338, 278, 6593, 310, 2834, 29973]  # Example tokens
+generated_text = tokenizer.decode(generated_tokens)
+print(f"Generated text: {generated_text}")
+
+# Check vocabulary information
+print(f"\nTokenizer info:")
+print(f"  Vocabulary size: {tokenizer.n_words}")
+print(f"  BOS ID: {tokenizer.bos_id}")
+print(f"  EOS ID: {tokenizer.eos_id}")
+print(f"  PAD ID: {tokenizer.pad_id}")
+```

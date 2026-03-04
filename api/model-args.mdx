@@ -1,0 +1,99 @@
+---
+title: ModelArgs
+description: Configuration dataclass for Llama 2 model architecture parameters
+---
+
+## Overview
+
+`ModelArgs` is a dataclass that defines all configuration parameters for the Llama 2 Transformer model. It controls model dimensions, layer counts, attention heads, and training constraints.
+
+## Definition
+
+```python
+@dataclass
+class ModelArgs:
+    dim: int = 4096
+    n_layers: int = 32
+    n_heads: int = 32
+    n_kv_heads: Optional[int] = None
+    vocab_size: int = -1
+    multiple_of: int = 256
+    ffn_dim_multiplier: Optional[float] = None
+    norm_eps: float = 1e-5
+    max_batch_size: int = 32
+    max_seq_len: int = 2048
+```
+
+## Parameters
+
+<ParamField path="dim" type="int" default="4096">
+  Model dimension size. This is the primary dimensionality of the model's hidden states and embeddings.
+</ParamField>
+
+<ParamField path="n_layers" type="int" default="32">
+  Number of Transformer layers in the model.
+</ParamField>
+
+<ParamField path="n_heads" type="int" default="32">
+  Number of attention heads for queries in the multi-head attention mechanism.
+</ParamField>
+
+<ParamField path="n_kv_heads" type="Optional[int]" default="None">
+  Number of key and value heads for Grouped-Query Attention (GQA). If `None`, defaults to `n_heads` (standard multi-head attention). When set to a value less than `n_heads`, enables GQA for improved efficiency.
+</ParamField>
+
+<ParamField path="vocab_size" type="int" default="-1">
+  Vocabulary size. Typically set to `-1` initially and defined later by the tokenizer during model initialization.
+</ParamField>
+
+<ParamField path="multiple_of" type="int" default="256">
+  Ensures the SwiGLU feedforward hidden layer size is a multiple of this value (a large power of 2). This improves computational efficiency on modern hardware.
+</ParamField>
+
+<ParamField path="ffn_dim_multiplier" type="Optional[float]" default="None">
+  Optional multiplier for the feedforward network hidden dimension. When specified, scales the computed hidden dimension by this factor.
+</ParamField>
+
+<ParamField path="norm_eps" type="float" default="1e-5">
+  Epsilon value for RMSNorm layer normalization, added for numerical stability.
+</ParamField>
+
+<ParamField path="max_batch_size" type="int" default="32">
+  Maximum batch size for inference. Used to pre-allocate KV cache tensors in the Attention module.
+</ParamField>
+
+<ParamField path="max_seq_len" type="int" default="2048">
+  Maximum sequence length for inference. Used to pre-allocate KV cache tensors and precompute rotary position embeddings.
+</ParamField>
+
+## Usage in Transformer
+
+The `ModelArgs` configuration is used to initialize the Transformer model and all its components:
+
+```python
+# Initialize model configuration
+model_args = ModelArgs(
+    dim=4096,
+    n_layers=32,
+    n_heads=32,
+    n_kv_heads=8,  # GQA with 8 KV heads
+    vocab_size=32000,
+    max_batch_size=4,
+    max_seq_len=2048
+)
+
+# Create Transformer model
+transformer = Transformer(model_args)
+```
+
+The configuration is passed to:
+- **Attention**: Uses `dim`, `n_heads`, `n_kv_heads`, `max_batch_size`, and `max_seq_len` (see model.py:178-251)
+- **FeedForward**: Uses `dim`, `multiple_of`, and `ffn_dim_multiplier` (see model.py:376-381)
+- **TransformerBlock**: Uses `dim`, `n_heads`, and `norm_eps` (see model.py:352-384)
+- **Transformer**: Uses all parameters for layer construction and initialization (see model.py:414-454)
+
+## Notes
+
+- The Llama 2 7B model uses 32 layers, 32 attention heads, and a dimension of 4096
+- For Grouped-Query Attention, set `n_kv_heads` to a value less than `n_heads` (e.g., 8 KV heads with 32 query heads)
+- The `max_seq_len` is multiplied by 2 when precomputing frequencies to support the 4096 token limit dynamically

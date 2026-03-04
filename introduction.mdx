@@ -1,0 +1,173 @@
+---
+title: Introduction
+description: Inference code for Llama 2 large language models from Meta
+mode: custom
+---
+
+<div className="relative overflow-hidden bg-gradient-to-br from-[#0084ff] via-[#0066cc] to-[#004d99] dark:from-[#0066cc] dark:via-[#004d99] dark:to-[#003366] py-20">
+  <div className="max-w-6xl mx-auto px-6 lg:px-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+          Llama 2 Documentation
+        </h1>
+        <p className="text-lg sm:text-xl text-white/90 max-w-2xl mb-8">
+          Run inference with Meta's powerful open-source large language models. From 7B to 70B parameters, with optimized transformer architecture and multi-GPU support.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a 
+            href="/quickstart" 
+            className="inline-flex items-center px-6 py-3 rounded-lg bg-white text-[#0084ff] font-semibold hover:bg-gray-100 transition-colors no-underline"
+          >
+            Get Started
+          </a>
+          <a 
+            href="/api/llama" 
+            className="inline-flex items-center px-6 py-3 rounded-lg border-2 border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors no-underline"
+          >
+            API Reference
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    Quick Start
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Get up and running with Llama 2 in minutes
+  </p>
+  
+  <Steps>
+    <Step title="Install dependencies">
+      Install the package with pip in a conda environment with PyTorch and CUDA available.
+      
+      ```bash
+      pip install -e .
+      ```
+    </Step>
+    
+    <Step title="Download model weights">
+      Visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) to register and download model weights. You'll receive a signed URL via email.
+      
+      ```bash
+      ./download.sh
+      ```
+      
+      <Note>
+        When prompted, paste the URL from your email. Links expire after 24 hours.
+      </Note>
+    </Step>
+    
+    <Step title="Run your first inference">
+      Use torchrun to execute chat completion with the downloaded model.
+      
+      ```bash
+      torchrun --nproc_per_node 1 example_chat_completion.py \
+          --ckpt_dir llama-2-7b-chat/ \
+          --tokenizer_path tokenizer.model \
+          --max_seq_len 512 --max_batch_size 6
+      ```
+      
+      <Accordion title="Expected output">
+        ```
+        User: what is the recipe of mayonnaise?
+        
+        > Assistant: Mayonnaise is a thick, creamy condiment made from egg yolks, oil, and acid (such as vinegar or lemon juice)...
+        ```
+      </Accordion>
+    </Step>
+  </Steps>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    Explore by Topic
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Everything you need to work with Llama 2 models
+  </p>
+  
+  <CardGroup cols={3}>
+    <Card title="Text Completion" icon="file-lines" href="/usage/text-completion">
+      Generate natural continuations of text prompts with pre-trained models
+    </Card>
+    <Card title="Chat Completion" icon="comments" href="/usage/chat-completion">
+      Build conversational AI with fine-tuned Llama-2-Chat models
+    </Card>
+    <Card title="Model Parallelism" icon="server" href="/usage/model-parallel">
+      Scale to larger models with multi-GPU inference using FairScale
+    </Card>
+    <Card title="Architecture" icon="diagram-project" href="/concepts/architecture">
+      Understand the optimized transformer architecture and GQA
+    </Card>
+    <Card title="Tokenization" icon="text" href="/concepts/tokenization">
+      Learn how SentencePiece encoding and special tokens work
+    </Card>
+    <Card title="Generation" icon="wand-magic-sparkles" href="/concepts/generation">
+      Control randomness with temperature, top-p sampling, and more
+    </Card>
+  </CardGroup>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    Model Variants
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Choose the right model for your use case
+  </p>
+  
+  <CardGroup cols={2}>
+    <Card title="Pre-trained Models" icon="brain" href="/models/pretrained">
+      7B, 13B, and 70B parameter models for text completion tasks
+    </Card>
+    <Card title="Chat Models" icon="message-bot" href="/models/chat">
+      Fine-tuned models optimized for dialogue and assistant use cases
+    </Card>
+  </CardGroup>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    API Reference
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Complete documentation of classes, methods, and types
+  </p>
+  
+  <CardGroup cols={2}>
+    <Card title="Llama Class" icon="code" href="/api/llama">
+      Build, generate, and complete text with the main inference class
+    </Card>
+    <Card title="Tokenizer" icon="language" href="/api/tokenizer">
+      Encode and decode text using SentencePiece tokenization
+    </Card>
+    <Card title="Transformer" icon="network-wired" href="/api/transformer">
+      Core transformer model with attention and feedforward layers
+    </Card>
+    <Card title="Types" icon="brackets-curly" href="/api/types">
+      TypedDict definitions for messages, predictions, and dialogs
+    </Card>
+  </CardGroup>
+</div>
+
+<div className="mt-20 mb-16 max-w-5xl mx-auto px-6">
+  <div className="rounded-2xl bg-gradient-to-br from-[#0084ff] to-[#0066cc] dark:from-[#0066cc] dark:to-[#004d99] p-8 sm:p-12">
+    <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+      Ready to get started?
+    </h2>
+    <p className="text-lg text-white/90 mb-6 max-w-2xl">
+      Follow our quickstart guide to download model weights and run your first inference in minutes.
+    </p>
+    <a 
+      href="/quickstart" 
+      className="inline-flex items-center px-6 py-3 rounded-lg bg-white text-[#0084ff] font-semibold hover:bg-gray-100 transition-colors no-underline"
+    >
+      Get Started
+    </a>
+  </div>
+</div>

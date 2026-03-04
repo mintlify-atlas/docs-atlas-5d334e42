@@ -1,0 +1,311 @@
+---
+title: "Llama"
+description: "Main class for loading and running Llama 2 models for text generation and chat completion."
+---
+
+## Overview
+
+The `Llama` class provides the primary interface for working with Llama 2 models. It handles model initialization, loading pre-trained checkpoints, and provides methods for text generation and chat completion.
+
+## Class Methods
+
+### build
+
+```python
+@staticmethod
+def build(
+    ckpt_dir: str,
+    tokenizer_path: str,
+    max_seq_len: int,
+    max_batch_size: int,
+    model_parallel_size: Optional[int] = None,
+    seed: int = 1,
+) -> "Llama"
+```
+
+Build a Llama instance by initializing and loading a pre-trained model.
+
+<ParamField path="ckpt_dir" type="str" required>
+  Path to the directory containing checkpoint files.
+</ParamField>
+
+<ParamField path="tokenizer_path" type="str" required>
+  Path to the tokenizer file.
+</ParamField>
+
+<ParamField path="max_seq_len" type="int" required>
+  Maximum sequence length for input text.
+</ParamField>
+
+<ParamField path="max_batch_size" type="int" required>
+  Maximum batch size for inference.
+</ParamField>
+
+<ParamField path="model_parallel_size" type="Optional[int]" default="None">
+  Number of model parallel processes. If not provided, it's determined from the environment.
+</ParamField>
+
+<ParamField path="seed" type="int" default="1">
+  Random seed for reproducibility.
+</ParamField>
+
+<ResponseField name="return" type="Llama">
+  An instance of the Llama class with the loaded model and tokenizer.
+</ResponseField>
+
+**Raises:**
+- `AssertionError`: If there are no checkpoint files in the specified directory, or if the model parallel size does not match the number of checkpoint files.
+
+**Note:**
+This method initializes the distributed process group, sets the device to CUDA, and loads the pre-trained model and tokenizer.
+
+**Example:**
+
+```python
+import os
+from llama import Llama
+
+# Build the model
+llama = Llama.build(
+    ckpt_dir="/path/to/llama-2-7b",
+    tokenizer_path="/path/to/tokenizer.model",
+    max_seq_len=512,
+    max_batch_size=32,
+    seed=42
+)
+```
+
+---
+
+### generate
+
+```python
+@torch.inference_mode()
+def generate(
+    self,
+    prompt_tokens: List[List[int]],
+    max_gen_len: int,
+    temperature: float = 0.6,
+    top_p: float = 0.9,
+    logprobs: bool = False,
+    echo: bool = False,
+) -> Tuple[List[List[int]], Optional[List[List[float]]]]
+```
+
+Generate text sequences based on provided prompts using the language generation model.
+
+<ParamField path="prompt_tokens" type="List[List[int]]" required>
+  List of tokenized prompts, where each prompt is represented as a list of integers.
+</ParamField>
+
+<ParamField path="max_gen_len" type="int" required>
+  Maximum length of the generated text sequence.
+</ParamField>
+
+<ParamField path="temperature" type="float" default="0.6">
+  Temperature value for controlling randomness in sampling.
+</ParamField>
+
+<ParamField path="top_p" type="float" default="0.9">
+  Top-p probability threshold for nucleus sampling.
+</ParamField>
+
+<ParamField path="logprobs" type="bool" default="False">
+  Flag indicating whether to compute token log probabilities.
+</ParamField>
+
+<ParamField path="echo" type="bool" default="False">
+  Flag indicating whether to include prompt tokens in the generated output.
+</ParamField>
+
+<ResponseField name="return" type="Tuple[List[List[int]], Optional[List[List[float]]]]">
+  A tuple containing generated token sequences and, if logprobs is True, corresponding token log probabilities.
+</ResponseField>
+
+**Note:**
+This method uses the provided prompts as a basis for generating text. It employs nucleus sampling to produce text with controlled randomness. If logprobs is True, token log probabilities are computed for each generated token.
+
+**Example:**
+
+```python
+# Tokenize prompts
+prompt_tokens = [
+    tokenizer.encode("The future of AI is", bos=True, eos=False),
+    tokenizer.encode("Machine learning will", bos=True, eos=False)
+]
+
+# Generate completions
+results, logprobs = llama.generate(
+    prompt_tokens=prompt_tokens,
+    max_gen_len=128,
+    temperature=0.8,
+    top_p=0.95
+)
+```
+
+---
+
+### text_completion
+
+```python
+def text_completion(
+    self,
+    prompts: List[str],
+    temperature: float = 0.6,
+    top_p: float = 0.9,
+    max_gen_len: Optional[int] = None,
+    logprobs: bool = False,
+    echo: bool = False,
+) -> List[CompletionPrediction]
+```
+
+Perform text completion for a list of prompts using the language generation model.
+
+<ParamField path="prompts" type="List[str]" required>
+  List of text prompts for completion.
+</ParamField>
+
+<ParamField path="temperature" type="float" default="0.6">
+  Temperature value for controlling randomness in sampling.
+</ParamField>
+
+<ParamField path="top_p" type="float" default="0.9">
+  Top-p probability threshold for nucleus sampling.
+</ParamField>
+
+<ParamField path="max_gen_len" type="Optional[int]" default="None">
+  Maximum length of the generated completion sequence. If not provided, it's set to the model's maximum sequence length minus 1.
+</ParamField>
+
+<ParamField path="logprobs" type="bool" default="False">
+  Flag indicating whether to compute token log probabilities.
+</ParamField>
+
+<ParamField path="echo" type="bool" default="False">
+  Flag indicating whether to include prompt tokens in the generated output.
+</ParamField>
+
+<ResponseField name="return" type="List[CompletionPrediction]">
+  List of completion predictions, each containing the generated text completion. Each `CompletionPrediction` is a dictionary with keys: `generation` (str), and optionally `tokens` (List[str]) and `logprobs` (List[float]) if `logprobs=True`.
+</ResponseField>
+
+**Note:**
+This method generates text completions for the provided prompts, employing nucleus sampling to introduce controlled randomness. If logprobs is True, token log probabilities are computed for each generated token.
+
+**Example:**
+
+```python
+# Simple text completion
+prompts = [
+    "The capital of France is",
+    "In the year 2050, technology will"
+]
+
+results = llama.text_completion(
+    prompts=prompts,
+    temperature=0.7,
+    top_p=0.9,
+    max_gen_len=64
+)
+
+for result in results:
+    print(result["generation"])
+
+# With log probabilities
+results_with_logprobs = llama.text_completion(
+    prompts=prompts,
+    logprobs=True,
+    echo=True
+)
+
+for result in results_with_logprobs:
+    print(f"Text: {result['generation']}")
+    print(f"Tokens: {result['tokens']}")
+    print(f"Logprobs: {result['logprobs']}")
+```
+
+---
+
+### chat_completion
+
+```python
+def chat_completion(
+    self,
+    dialogs: List[Dialog],
+    temperature: float = 0.6,
+    top_p: float = 0.9,
+    max_gen_len: Optional[int] = None,
+    logprobs: bool = False,
+) -> List[ChatPrediction]
+```
+
+Generate assistant responses for a list of conversational dialogs using the language generation model.
+
+<ParamField path="dialogs" type="List[Dialog]" required>
+  List of conversational dialogs, where each dialog is a list of messages. Each message is a dictionary with keys `role` ("system", "user", or "assistant") and `content` (str).
+</ParamField>
+
+<ParamField path="temperature" type="float" default="0.6">
+  Temperature value for controlling randomness in sampling.
+</ParamField>
+
+<ParamField path="top_p" type="float" default="0.9">
+  Top-p probability threshold for nucleus sampling.
+</ParamField>
+
+<ParamField path="max_gen_len" type="Optional[int]" default="None">
+  Maximum length of the generated response sequence. If not provided, it's set to the model's maximum sequence length minus 1.
+</ParamField>
+
+<ParamField path="logprobs" type="bool" default="False">
+  Flag indicating whether to compute token log probabilities.
+</ParamField>
+
+<ResponseField name="return" type="List[ChatPrediction]">
+  List of chat predictions, each containing the assistant's generated response. Each `ChatPrediction` is a dictionary with key `generation` (a Message with `role` and `content`), and optionally `tokens` (List[str]) and `logprobs` (List[float]) if `logprobs=True`.
+</ResponseField>
+
+**Raises:**
+- `AssertionError`: If the last message in a dialog is not from the user.
+- `AssertionError`: If the dialog roles are not in the required 'user', 'assistant', and optional 'system' order.
+
+**Note:**
+This method generates assistant responses for the provided conversational dialogs. It employs nucleus sampling to introduce controlled randomness in text generation. If logprobs is True, token log probabilities are computed for each generated token.
+
+**Example:**
+
+```python
+# Single dialog with system message
+dialogs = [
+    [
+        {"role": "system", "content": "You are a helpful AI assistant."},
+        {"role": "user", "content": "What is the capital of France?"}
+    ]
+]
+
+results = llama.chat_completion(
+    dialogs=dialogs,
+    temperature=0.6,
+    max_gen_len=256
+)
+
+print(results[0]["generation"]["content"])
+
+# Multi-turn conversation
+dialogs = [
+    [
+        {"role": "user", "content": "Hello! Can you help me?"},
+        {"role": "assistant", "content": "Of course! What do you need help with?"},
+        {"role": "user", "content": "I need to learn about Python."}
+    ]
+]
+
+results = llama.chat_completion(
+    dialogs=dialogs,
+    temperature=0.7,
+    top_p=0.95
+)
+
+for result in results:
+    print(f"{result['generation']['role']}: {result['generation']['content']}")
+```

@@ -1,0 +1,410 @@
+---
+title: Installation
+description: Complete installation guide for Llama 2 - prerequisites, dependencies, model downloads, and verification
+---
+
+This guide provides comprehensive instructions for installing Llama 2 and all its dependencies.
+
+## System Requirements
+
+### Hardware Requirements
+
+Llama 2 models have varying hardware requirements based on size:
+
+| Model Size | Model Parallel (MP) | Minimum GPU Memory | Recommended GPUs |
+|------------|---------------------|-------------------|------------------|
+| 7B | 1 | 16 GB | 1x A100 or V100 |
+| 13B | 2 | 32 GB | 2x A100 or V100 |
+| 70B | 8 | 128 GB | 8x A100 or V100 |
+
+<Note>
+All models support sequence lengths up to 4096 tokens, but memory is pre-allocated based on `max_seq_len` and `max_batch_size` parameters.
+</Note>
+
+### Software Requirements
+
+- **Operating System**: Linux (Ubuntu 18.04+, CentOS 7+) or macOS
+- **Python**: 3.8 or higher
+- **CUDA**: 11.0 or higher (for GPU acceleration)
+- **conda**: Anaconda or Miniconda
+- **Utilities**: `wget`, `md5sum` (or `md5` on macOS)
+
+## Installation Steps
+
+<Steps>
+  <Step title="Set Up Conda Environment">
+    Create a new conda environment with Python 3.8+:
+    
+    ```bash
+    conda create -n llama python=3.8
+    conda activate llama
+    ```
+    
+    This isolates Llama 2 dependencies from other projects.
+  </Step>
+
+  <Step title="Install PyTorch with CUDA">
+    Install PyTorch with CUDA support for GPU acceleration:
+    
+    <CodeGroup>
+    ```bash CUDA 11.8
+    conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia
+    ```
+    
+    ```bash CUDA 12.1
+    conda install pytorch pytorch-cuda=12.1 -c pytorch -c nvidia
+    ```
+    
+    ```bash CPU Only (Not Recommended)
+    conda install pytorch cpuonly -c pytorch
+    ```
+    </CodeGroup>
+    
+    <Warning>
+    CPU-only installation is not recommended for production use. Inference will be significantly slower.
+    </Warning>
+    
+    Verify PyTorch installation:
+    
+    ```bash
+    python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA Available: {torch.cuda.is_available()}')"
+    ```
+    
+    Expected output:
+    ```
+    PyTorch: 2.0.0
+    CUDA Available: True
+    ```
+  </Step>
+
+  <Step title="Clone Llama Repository">
+    Clone the official Llama 2 repository:
+    
+    ```bash
+    git clone https://github.com/facebookresearch/llama.git
+    cd llama
+    ```
+  </Step>
+
+  <Step title="Install Llama Package">
+    Install the Llama package in editable mode:
+    
+    ```bash
+    pip install -e .
+    ```
+    
+    This installs the following dependencies from `requirements.txt`:
+    
+    | Package | Purpose |
+    |---------|--------|
+    | `torch` | PyTorch deep learning framework |
+    | `fairscale` | Model parallelism and memory optimization |
+    | `fire` | Command-line interface generation |
+    | `sentencepiece` | Tokenization library |
+    
+    The `-e` flag installs in editable mode, allowing you to modify the source code.
+  </Step>
+
+  <Step title="Verify Installation">
+    Verify the installation by importing the Llama module:
+    
+    ```bash
+    python -c "from llama import Llama; print('Llama package installed successfully')"
+    ```
+    
+    If successful, you should see:
+    ```
+    Llama package installed successfully
+    ```
+  </Step>
+</Steps>
+
+## Model Download Process
+
+### Request Access
+
+<Steps>
+  <Step title="Register for Access">
+    Visit the [Meta Llama Downloads](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) page and complete the registration form.
+    
+    You'll need to provide:
+    - Name and email
+    - Organization (optional)
+    - Country
+    - Intended use case
+  </Step>
+
+  <Step title="Accept License">
+    Review and accept the Llama 2 Community License Agreement.
+    
+    <Warning>
+    Ensure you understand the license terms, including acceptable use policies and restrictions.
+    </Warning>
+  </Step>
+
+  <Step title="Receive Download URL">
+    After approval (typically within hours), you'll receive an email with a unique, signed download URL.
+    
+    <Note>
+    - URLs expire after 24 hours
+    - URLs have download limits
+    - You can request new URLs if needed
+    </Note>
+  </Step>
+</Steps>
+
+### Download Models
+
+The `download.sh` script automates model and tokenizer downloads:
+
+```bash
+chmod +x download.sh
+./download.sh
+```
+
+#### Script Workflow
+
+<Steps>
+  <Step title="Enter Download URL">
+    When prompted, paste the URL from your email:
+    
+    ```
+    Enter the URL from email: https://download.llamameta.net/*?Policy=...
+    ```
+    
+    <Warning>
+    Manually copy-paste the URL. Do not use browser "Copy Link" functionality.
+    </Warning>
+  </Step>
+
+  <Step title="Select Models">
+    Choose which models to download:
+    
+    ```
+    Enter the list of models to download without spaces (7B,13B,70B,7B-chat,13B-chat,70B-chat), or press Enter for all:
+    ```
+    
+    Options:
+    - **Pretrained models**: `7B`, `13B`, `70B`
+    - **Chat models**: `7B-chat`, `13B-chat`, `70B-chat`
+    - **Download all**: Press Enter without input
+    - **Download specific**: `7B,7B-chat` (no spaces)
+    
+    <Accordion title="Model Variants Explained">
+      **Pretrained Models** (`7B`, `13B`, `70B`)
+      - Base models trained on text completion
+      - Use for tasks where the answer is a natural continuation
+      - Example: `"The theory of relativity states that"` → model completes
+      
+      **Chat Models** (`7B-chat`, `13B-chat`, `70B-chat`)
+      - Fine-tuned for dialogue and instruction-following
+      - Require specific formatting with `INST` and `<<SYS>>` tags
+      - Better for conversational AI and Q&A
+    </Accordion>
+  </Step>
+
+  <Step title="Download and Verify">
+    The script will:
+    
+    1. Download LICENSE and usage policy
+    2. Download tokenizer and verify checksums
+    3. For each model:
+       - Download model shards (`consolidated.*.pth`)
+       - Download configuration (`params.json`)
+       - Verify file integrity with checksums
+    
+    ```bash
+    Downloading LICENSE and Acceptable Usage Policy
+    Downloading tokenizer
+    Downloading llama-2-7b-chat
+    Checking checksums
+    ```
+    
+    <Note>
+    Model downloads are large:
+    - 7B: ~13 GB
+    - 13B: ~26 GB
+    - 70B: ~138 GB
+    
+    Ensure you have sufficient disk space.
+    </Note>
+  </Step>
+</Steps>
+
+#### Understanding Downloaded Files
+
+After downloading, your directory structure will look like:
+
+```
+llama/
+├── llama-2-7b-chat/
+│   ├── consolidated.00.pth      # Model weights
+│   ├── params.json               # Model configuration
+│   └── checklist.chk             # Checksum file
+├── llama-2-7b/
+│   ├── consolidated.00.pth
+│   ├── params.json
+│   └── checklist.chk
+├── tokenizer.model               # Shared tokenizer
+├── tokenizer_checklist.chk       # Tokenizer checksum
+├── LICENSE                       # License agreement
+└── USE_POLICY.md                # Acceptable use policy
+```
+
+<Accordion title="Understanding Model Shards">
+  Larger models are split into multiple shard files:
+  
+  | Model | Shards | Files |
+  |-------|--------|-------|
+  | 7B | 1 | `consolidated.00.pth` |
+  | 13B | 2 | `consolidated.00.pth`, `consolidated.01.pth` |
+  | 70B | 8 | `consolidated.00.pth` through `consolidated.07.pth` |
+  
+  Sharding enables distribution across multiple GPUs for model parallelism.
+</Accordion>
+
+## Alternative: Hugging Face Downloads
+
+You can also access Llama 2 models through Hugging Face:
+
+<Steps>
+  <Step title="Request Hugging Face Access">
+    Visit a Llama 2 model repository on Hugging Face (e.g., [meta-llama/Llama-2-7b-chat-hf](https://huggingface.co/meta-llama/Llama-2-7b-chat-hf)).
+    
+    Acknowledge the license and fill out the access form.
+  </Step>
+
+  <Step title="Install Hugging Face Libraries">
+    ```bash
+    pip install transformers accelerate
+    ```
+  </Step>
+
+  <Step title="Download and Use Models">
+    ```python
+    from transformers import AutoTokenizer, AutoModelForCausalLM
+    
+    model_id = "meta-llama/Llama-2-7b-chat-hf"
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        device_map="auto",
+        torch_dtype=torch.float16
+    )
+    ```
+  </Step>
+</Steps>
+
+<Note>
+The official Llama repository provides more control and lower-level access, while Hugging Face offers easier integration with the transformers ecosystem.
+</Note>
+
+## Verification and Testing
+
+After installation, verify everything works:
+
+### Quick Verification
+
+```bash
+# Test with chat model
+torchrun --nproc_per_node 1 example_chat_completion.py \
+    --ckpt_dir llama-2-7b-chat/ \
+    --tokenizer_path tokenizer.model \
+    --max_seq_len 512 \
+    --max_batch_size 6
+```
+
+If successful, you'll see chat completions for pre-configured dialogs.
+
+### Test Text Completion
+
+```bash
+# Test with pretrained model
+torchrun --nproc_per_node 1 example_text_completion.py \
+    --ckpt_dir llama-2-7b/ \
+    --tokenizer_path tokenizer.model \
+    --max_seq_len 128 \
+    --max_batch_size 4
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Import Error: No module named 'llama'">
+    Ensure you're in the correct conda environment and installed the package:
+    
+    ```bash
+    conda activate llama
+    pip install -e .
+    ```
+  </Accordion>
+  
+  <Accordion title="CUDA out of memory">
+    Reduce memory allocation parameters:
+    
+    ```bash
+    torchrun --nproc_per_node 1 example_chat_completion.py \
+        --ckpt_dir llama-2-7b-chat/ \
+        --tokenizer_path tokenizer.model \
+        --max_seq_len 256 \
+        --max_batch_size 2
+    ```
+    
+    Or use a smaller model (7B instead of 13B/70B).
+  </Accordion>
+  
+  <Accordion title="Download script fails with 403 error">
+    Your download URL has expired. Request a new URL from the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads/).
+  </Accordion>
+  
+  <Accordion title="Checksum verification fails">
+    The downloaded files may be corrupted. Delete the affected model directory and re-run the download script.
+    
+    ```bash
+    rm -rf llama-2-7b-chat/
+    ./download.sh
+    ```
+  </Accordion>
+  
+  <Accordion title="fairscale installation fails">
+    Some systems require manual fairscale installation:
+    
+    ```bash
+    pip install fairscale --no-build-isolation
+    ```
+    
+    Or install from source:
+    ```bash
+    git clone https://github.com/facebookresearch/fairscale.git
+    cd fairscale
+    pip install .
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Run your first inference in minutes
+  </Card>
+  
+  <Card title="Llama Cookbook" icon="book" href="https://github.com/facebookresearch/llama-recipes">
+    Advanced examples and integrations
+  </Card>
+  
+  <Card title="Model Card" icon="id-card" href="https://github.com/facebookresearch/llama/blob/main/MODEL_CARD.md">
+    Detailed model specifications
+  </Card>
+  
+  <Card title="FAQ" icon="circle-question" href="https://ai.meta.com/llama/faq/">
+    Frequently asked questions
+  </Card>
+</CardGroup>
+
+## Additional Resources
+
+- [Research Paper](https://ai.meta.com/research/publications/llama-2-open-foundation-and-fine-tuned-chat-models/) - Technical details and benchmarks
+- [Responsible Use Guide](https://github.com/facebookresearch/llama/blob/main/Responsible-Use-Guide.pdf) - Safety and ethical guidelines
+- [License](https://github.com/facebookresearch/llama/blob/main/LICENSE) - Terms of use
+- [Acceptable Use Policy](https://github.com/facebookresearch/llama/blob/main/USE_POLICY.md) - Usage restrictions

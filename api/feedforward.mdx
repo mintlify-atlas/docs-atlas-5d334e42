@@ -1,0 +1,142 @@
+---
+title: FeedForward
+description: SwiGLU feedforward network with gated linear units
+---
+
+## Overview
+
+The `FeedForward` class implements a SwiGLU (Swish-Gated Linear Unit) feedforward network, which is a key component of each Transformer layer. It uses a gating mechanism with the SiLU (Swish) activation function for improved performance.
+
+## Definition
+
+```python
+class FeedForward(nn.Module):
+    def __init__(
+        self,
+        dim: int,
+        hidden_dim: int,
+        multiple_of: int,
+        ffn_dim_multiplier: Optional[float],
+    )
+    def forward(self, x: torch.Tensor) -> torch.Tensor
+```
+
+## Initialization
+
+### Parameters
+
+<ParamField path="dim" type="int">
+  Input dimension. This is the model's hidden dimension from `ModelArgs.dim`.
+</ParamField>
+
+<ParamField path="hidden_dim" type="int">
+  Base hidden dimension of the feedforward layer. The actual hidden dimension is computed as `int(2 * hidden_dim / 3)` and then adjusted.
+</ParamField>
+
+<ParamField path="multiple_of" type="int">
+  Value to ensure the hidden dimension is a multiple of this number. Rounds up the computed hidden dimension to the nearest multiple for computational efficiency on modern hardware.
+</ParamField>
+
+<ParamField path="ffn_dim_multiplier" type="Optional[float]">
+  Optional custom multiplier for the hidden dimension. When provided, scales the computed hidden dimension by this factor before rounding to `multiple_of`.
+</ParamField>
+
+### Hidden Dimension Computation
+
+The actual hidden dimension is computed using the following logic (model.py:331-335):
+
+```python
+hidden_dim = int(2 * hidden_dim / 3)
+if ffn_dim_multiplier is not None:
+    hidden_dim = int(ffn_dim_multiplier * hidden_dim)
+hidden_dim = multiple_of * ((hidden_dim + multiple_of - 1) // multiple_of)
+```
+
+This ensures:
+1. Base scaling by 2/3
+2. Optional custom scaling via `ffn_dim_multiplier`
+3. Rounding up to nearest multiple of `multiple_of`
+
+### Attributes
+
+<ParamField path="w1" type="ColumnParallelLinear">
+  Linear transformation for the first gate layer. Projects from `dim` to `hidden_dim` without bias.
+</ParamField>
+
+<ParamField path="w2" type="RowParallelLinear">
+  Linear transformation for the output layer. Projects from `hidden_dim` back to `dim` without bias.
+</ParamField>
+
+<ParamField path="w3" type="ColumnParallelLinear">
+  Linear transformation for the second gate layer. Projects from `dim` to `hidden_dim` without bias.
+</ParamField>
+
+## Forward Pass
+
+### Parameters
+
+<ParamField path="x" type="torch.Tensor">
+  Input tensor with shape `(batch_size, seq_len, dim)`.
+</ParamField>
+
+### Returns
+
+<ParamField path="output" type="torch.Tensor">
+  Output tensor with shape `(batch_size, seq_len, dim)`.
+</ParamField>
+
+### Implementation
+
+The forward pass implements the SwiGLU activation function (model.py:348):
+
+```python
+return self.w2(F.silu(self.w1(x)) * self.w3(x))
+```
+
+This computes:
+1. **Gate branch**: `F.silu(self.w1(x))` - Apply SiLU activation to first projection
+2. **Linear branch**: `self.w3(x)` - Second projection without activation
+3. **Gating**: Element-wise multiplication of the two branches
+4. **Output projection**: `self.w2(...)` - Project back to model dimension
+
+## SwiGLU Activation
+
+SwiGLU combines two concepts:
+- **GLU (Gated Linear Unit)**: Uses a gating mechanism with element-wise multiplication
+- **SiLU/Swish**: Smooth activation function `x * sigmoid(x)`
+
+The formula is: `SwiGLU(x) = (Swish(W1·x) ⊙ W3·x) · W2`
+
+Where `⊙` represents element-wise multiplication.
+
+## Usage in TransformerBlock
+
+The FeedForward module is instantiated in `TransformerBlock` with specific dimension calculations:
+
+```python
+class TransformerBlock(nn.Module):
+    def __init__(self, layer_id: int, args: ModelArgs):
+        super().__init__()
+        self.feed_forward = FeedForward(
+            dim=args.dim,
+            hidden_dim=4 * args.dim,  # Base hidden dim is 4x model dim
+            multiple_of=args.multiple_of,
+            ffn_dim_multiplier=args.ffn_dim_multiplier,
+        )
+        self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
+        # ...
+
+    def forward(self, x, start_pos, freqs_cis, mask):
+        h = x + self.attention(self.attention_norm(x), start_pos, freqs_cis, mask)
+        # Pre-normalization + residual connection
+        out = h + self.feed_forward(self.ffn_norm(h))
+        return out
+```
+
+See model.py:376-381 for initialization and model.py:409 for the forward pass with pre-normalization and residual connection.
+
+## Performance Considerations
+
+- The `multiple_of` parameter (default 256) ensures hidden dimensions are multiples of large powers of 2, improving GPU/TPU efficiency
+- Model parallelism is handled via `ColumnParallelLinear` and `RowParallelLinear` from FairScale
+- The 2/3 scaling factor and 4x base expansion result in an effective hidden dimension of approximately `8/3 * dim` before rounding

@@ -1,0 +1,205 @@
+---
+title: 'Chat Completion'
+description: 'Build conversational applications with fine-tuned Llama 2 chat models'
+---
+
+## Overview
+
+Chat completion uses fine-tuned Llama 2 models trained for dialogue applications. These models follow a specific formatting with `[INST]` and `<<SYS>>` tags to handle multi-turn conversations with system prompts, user messages, and assistant responses.
+
+## Basic Usage
+
+Build a Llama instance and call `chat_completion()` with your dialogs:
+
+```python
+from llama import Llama, Dialog
+from typing import List
+
+generator = Llama.build(
+    ckpt_dir="llama-2-7b-chat/",
+    tokenizer_path="tokenizer.model",
+    max_seq_len=512,
+    max_batch_size=8,
+)
+
+dialogs: List[Dialog] = [
+    [{"role": "user", "content": "what is the recipe of mayonnaise?"}],
+]
+
+results = generator.chat_completion(
+    dialogs,
+    max_gen_len=None,
+    temperature=0.6,
+    top_p=0.9,
+)
+
+for dialog, result in zip(dialogs, results):
+    for msg in dialog:
+        print(f"{msg['role'].capitalize()}: {msg['content']}")
+    print(f"> {result['generation']['role'].capitalize()}: {result['generation']['content']}")
+```
+
+## Parameters
+
+### Build Parameters
+
+<ParamField path="ckpt_dir" type="str" required>
+  Path to the directory containing checkpoint files for the chat model. Use a `-chat` model variant (e.g., `llama-2-7b-chat/`).
+</ParamField>
+
+<ParamField path="tokenizer_path" type="str" required>
+  Path to the tokenizer model used for text encoding/decoding.
+</ParamField>
+
+<ParamField path="max_seq_len" type="int" required>
+  Maximum sequence length for input prompts. Defaults to 512 for chat completion. All models support up to 4096 tokens.
+</ParamField>
+
+<ParamField path="max_batch_size" type="int" required>
+  Maximum batch size for generating sequences. Defaults to 8.
+</ParamField>
+
+### Generation Parameters
+
+<ParamField path="dialogs" type="List[Dialog]" required>
+  List of conversational dialogs, where each dialog is a list of messages. Each message is a dictionary with `role` and `content` keys.
+</ParamField>
+
+<ParamField path="temperature" type="float" default="0.6">
+  Temperature value for controlling randomness in generation. Higher values increase creativity, lower values make responses more focused.
+</ParamField>
+
+<ParamField path="top_p" type="float" default="0.9">
+  Top-p probability threshold for nucleus sampling. Controls response diversity.
+</ParamField>
+
+<ParamField path="max_gen_len" type="int" default="None">
+  Maximum length of generated response. If None, it will be set to the model's max sequence length.
+</ParamField>
+
+<ParamField path="logprobs" type="bool" default="false">
+  Whether to compute and return token log probabilities.
+</ParamField>
+
+## Dialog Format
+
+Each dialog is a list of messages with roles:
+
+- `system`: Optional system prompt that guides the assistant's behavior
+- `user`: User messages
+- `assistant`: Assistant responses (for multi-turn conversations)
+
+The last message in a dialog must always be from the `user` role.
+
+### Simple Query
+
+```python
+dialogs = [
+    [{"role": "user", "content": "what is the recipe of mayonnaise?"}],
+]
+```
+
+### Multi-Turn Conversation
+
+```python
+dialogs = [
+    [
+        {"role": "user", "content": "I am going to Paris, what should I see?"},
+        {
+            "role": "assistant",
+            "content": """Paris, the capital of France, is known for its stunning architecture, art museums, historical landmarks, and romantic atmosphere. Here are some of the top attractions to see in Paris:
+
+1. The Eiffel Tower: The iconic Eiffel Tower is one of the most recognizable landmarks in the world and offers breathtaking views of the city.
+2. The Louvre Museum: The Louvre is one of the world's largest and most famous museums, housing an impressive collection of art and artifacts, including the Mona Lisa.
+3. Notre-Dame Cathedral: This beautiful cathedral is one of the most famous landmarks in Paris and is known for its Gothic architecture and stunning stained glass windows.
+
+These are just a few of the many attractions that Paris has to offer. With so much to see and do, it's no wonder that Paris is one of the most popular tourist destinations in the world.""",
+        },
+        {"role": "user", "content": "What is so great about #1?"},
+    ],
+]
+```
+
+### System Prompt
+
+```python
+dialogs = [
+    [
+        {"role": "system", "content": "Always answer with Haiku"},
+        {"role": "user", "content": "I am going to Paris, what should I see?"},
+    ],
+]
+```
+
+### Custom System Instructions
+
+```python
+dialogs = [
+    [
+        {
+            "role": "system",
+            "content": """You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
+
+If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.""",
+        },
+        {"role": "user", "content": "Write a brief birthday message to John"},
+    ],
+]
+```
+
+### Creative System Prompts
+
+```python
+dialogs = [
+    [
+        {"role": "system", "content": "Always answer with emojis"},
+        {"role": "user", "content": "How to go from Beijing to NY?"},
+    ],
+]
+```
+
+## Response Format
+
+The `chat_completion()` method returns a list of `ChatPrediction` dictionaries:
+
+```python
+[
+    {
+        "generation": {
+            "role": "assistant",
+            "content": str  # The generated response
+        },
+        "tokens": List[str],  # Optional: decoded tokens (if logprobs=True)
+        "logprobs": List[float]  # Optional: log probabilities (if logprobs=True)
+    }
+]
+```
+
+## Safety
+
+The chat completion method includes safety checks:
+
+- Special tags (`[INST]`, `[/INST]`, `<<SYS>>`, `<</SYS>>`) are not allowed in user content
+- Unsafe requests return: `"Error: special tags are not allowed as part of the prompt."`
+
+For production use, consider deploying additional classifiers for filtering unsafe inputs and outputs.
+
+## Running from Command Line
+
+Run the example script with a chat model:
+
+```bash
+torchrun --nproc_per_node 1 example_chat_completion.py \
+    --ckpt_dir llama-2-7b-chat/ \
+    --tokenizer_path tokenizer.model \
+    --max_seq_len 512 --max_batch_size 6
+```
+
+See [Model Parallel Configuration](/usage/model-parallel) for the correct `nproc_per_node` value for your model size.
+
+## Pretrained vs Chat Models
+
+- **Pretrained models**: Use `text_completion()` for natural text continuation
+- **Chat models** (e.g., `llama-2-7b-chat`): Use `chat_completion()` for dialogue applications with proper formatting
+
+Chat models require specific formatting with `[INST]` tags and follow a strict role alternation pattern (user/assistant/user/...). The `chat_completion()` method handles this formatting automatically.

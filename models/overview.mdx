@@ -1,0 +1,72 @@
+---
+title: Model Variants Overview
+description: Overview of Llama 2 model sizes and types
+---
+
+Llama 2 is a collection of pretrained and fine-tuned large language models ranging from 7 billion to 70 billion parameters.
+
+## Model Sizes
+
+Llama 2 is available in three parameter sizes:
+
+| Model Size | Model Parallel (MP) | Use Case |
+|------------|---------------------|----------|
+| **7B** | 1 | Lightweight deployment, single GPU inference |
+| **13B** | 2 | Balanced performance and resource usage |
+| **70B** | 8 | Maximum performance, enterprise applications |
+
+### Context Length
+
+All Llama 2 models support a **maximum sequence length of 4096 tokens**. When running inference, you can set `max_seq_len` according to your hardware constraints, as the cache is pre-allocated based on this value and `max_batch_size`.
+
+## Model Types
+
+Llama 2 comes in two variants:
+
+### Pretrained Models
+
+Base models trained on 2 trillion tokens from publicly available online data:
+- **Training**: Pretrained only, no fine-tuning
+- **Use Case**: Natural language generation tasks where you need text completion
+- **Prompting**: Requires prompts where the expected answer is the natural continuation
+- **Models**: `llama-2-7b`, `llama-2-13b`, `llama-2-70b`
+
+### Chat Models
+
+Fine-tuned versions optimized for dialogue applications:
+- **Training**: Pretrained + Supervised Fine-Tuning (SFT) + Reinforcement Learning with Human Feedback (RLHF)
+- **Use Case**: Conversational AI, chat assistants, Q&A systems
+- **Prompting**: Requires specific dialog formatting with special tags
+- **Models**: `llama-2-7b-chat`, `llama-2-13b-chat`, `llama-2-70b-chat`
+
+## Architecture
+
+Llama 2 uses an optimized transformer architecture:
+- **Type**: Auto-regressive language model
+- **Training Data**: 2.0T tokens for all sizes
+- **Special Features**: The 70B model uses Grouped-Query Attention (GQA) for improved inference scalability
+- **Training Period**: January 2023 to July 2023
+- **Data Cutoff**: September 2022 (pretraining), up to July 2023 (fine-tuning data)
+
+## Performance Benchmarks
+
+Performance on academic benchmarks (Llama 2 pretrained models):
+
+| Model | Code | Commonsense Reasoning | World Knowledge | Reading Comprehension | Math | MMLU |
+|-------|------|----------------------|-----------------|----------------------|------|------|
+| 7B | 16.8 | 63.9 | 48.9 | 61.3 | 14.6 | 45.3 |
+| 13B | 24.5 | 66.9 | 55.4 | 65.8 | 28.7 | 54.8 |
+| 70B | **37.5** | **71.9** | **63.6** | **69.4** | **35.2** | **68.9** |
+
+## Choosing a Model
+
+**Use Pretrained Models when:**
+- You need natural text continuation or completion
+- You're building custom applications with specific prompting patterns
+- You plan to fine-tune for your specific domain
+
+**Use Chat Models when:**
+- Building conversational interfaces
+- Implementing Q&A systems
+- Creating assistant-like applications
+- You need safety-aligned responses

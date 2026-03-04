@@ -1,0 +1,150 @@
+---
+title: 'Text Completion'
+description: 'Generate text continuations with pretrained Llama 2 models'
+---
+
+## Overview
+
+Text completion with Llama 2 uses pretrained models to generate natural continuations of prompts. These models are **not** fine-tuned for chat or Q&A - they should be prompted so that the expected answer is the natural continuation of the prompt.
+
+## Basic Usage
+
+First, build a Llama instance and then call `text_completion()` with your prompts:
+
+```python
+from llama import Llama
+from typing import List
+
+generator = Llama.build(
+    ckpt_dir="llama-2-7b/",
+    tokenizer_path="tokenizer.model",
+    max_seq_len=128,
+    max_batch_size=4,
+)
+
+prompts: List[str] = [
+    "I believe the meaning of life is",
+    "Simply put, the theory of relativity states that ",
+]
+
+results = generator.text_completion(
+    prompts,
+    max_gen_len=64,
+    temperature=0.6,
+    top_p=0.9,
+)
+
+for prompt, result in zip(prompts, results):
+    print(prompt)
+    print(f"> {result['generation']}")
+```
+
+## Parameters
+
+### Build Parameters
+
+<ParamField path="ckpt_dir" type="str" required>
+  Path to the directory containing checkpoint files for the pretrained model.
+</ParamField>
+
+<ParamField path="tokenizer_path" type="str" required>
+  Path to the tokenizer model used for text encoding/decoding.
+</ParamField>
+
+<ParamField path="max_seq_len" type="int" required>
+  Maximum sequence length for input prompts. Defaults to 128 for text completion.
+  All models support up to 4096 tokens, but cache is pre-allocated based on this value.
+</ParamField>
+
+<ParamField path="max_batch_size" type="int" required>
+  Maximum batch size for generating sequences. Defaults to 4.
+</ParamField>
+
+### Generation Parameters
+
+<ParamField path="prompts" type="List[str]" required>
+  List of text prompts for completion.
+</ParamField>
+
+<ParamField path="temperature" type="float" default="0.6">
+  Temperature value for controlling randomness in generation. Higher values (e.g., 1.0) make output more random, lower values (e.g., 0.1) make it more deterministic.
+</ParamField>
+
+<ParamField path="top_p" type="float" default="0.9">
+  Top-p probability threshold for nucleus sampling. Controls diversity by sampling from the smallest set of tokens whose cumulative probability exceeds this threshold.
+</ParamField>
+
+<ParamField path="max_gen_len" type="int" default="64">
+  Maximum length of generated sequences. If not provided, it's set to the model's maximum sequence length minus 1.
+</ParamField>
+
+<ParamField path="logprobs" type="bool" default="false">
+  Whether to compute and return token log probabilities.
+</ParamField>
+
+<ParamField path="echo" type="bool" default="false">
+  Whether to include prompt tokens in the generated output.
+</ParamField>
+
+## Example Prompts
+
+### Natural Continuation
+
+```python
+prompts = [
+    "I believe the meaning of life is",
+    "Simply put, the theory of relativity states that ",
+]
+```
+
+### Few-Shot Translation
+
+```python
+prompts = [
+    """Translate English to French:
+    
+    sea otter => loutre de mer
+    peppermint => menthe poivrée
+    plush girafe => girafe peluche
+    cheese =>""",
+]
+```
+
+### Message Completion
+
+```python
+prompts = [
+    """A brief message congratulating the team on the launch:
+
+    Hi everyone,
+    
+    I just """,
+]
+```
+
+## Response Format
+
+The `text_completion()` method returns a list of `CompletionPrediction` dictionaries:
+
+```python
+[
+    {
+        "generation": str,  # The generated text
+        "tokens": List[str],  # Optional: decoded tokens (if logprobs=True)
+        "logprobs": List[float]  # Optional: log probabilities (if logprobs=True)
+    }
+]
+```
+
+## Running from Command Line
+
+Run the example script with the appropriate model parallel value:
+
+```bash
+torchrun --nproc_per_node 1 example_text_completion.py \
+    --ckpt_dir llama-2-7b/ \
+    --tokenizer_path tokenizer.model \
+    --max_seq_len 128 --max_batch_size 4
+```
+
+See [Model Parallel Configuration](/usage/model-parallel) for the correct `nproc_per_node` value for your model size.

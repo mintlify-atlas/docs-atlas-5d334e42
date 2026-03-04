@@ -1,0 +1,171 @@
+---
+title: Pretrained Models
+description: Using Llama 2 pretrained models for text completion
+---
+
+Llama 2 pretrained models are base models that generate text by naturally continuing the input prompt. These models are trained on 2 trillion tokens but are not fine-tuned for chat or question-answering.
+
+## Use Cases
+
+Pretrained models excel at:
+- **Text completion**: Continuing a sentence or paragraph naturally
+- **Few-shot learning**: Following patterns from examples in the prompt
+- **Creative writing**: Generating stories, articles, or content
+- **Code generation**: Completing code snippets
+- **Translation**: When provided with example patterns
+- **Custom fine-tuning**: Serving as a base for domain-specific fine-tuning
+
+## Natural Continuation Prompts
+
+The key to using pretrained models is crafting prompts where **the expected answer is the natural continuation** of the prompt.
+
+### Basic Examples
+
+```python
+# Philosophical completion
+"I believe the meaning of life is"
+
+# Scientific explanation
+"Simply put, the theory of relativity states that "
+
+# Professional writing
+"""A brief message congratulating the team on the launch:
+
+Hi everyone,
+
+I just """
+```
+
+### Few-Shot Learning
+
+Provide examples in the prompt to guide the model:
+
+```python
+"""Translate English to French:
+
+sea otter => loutre de mer
+peppermint => menthe poivrée
+plush girafe => girafe peluche
+cheese =>"""
+```
+
+## Running Text Completion
+
+### Command Line
+
+```bash
+torchrun --nproc_per_node 1 example_text_completion.py \
+    --ckpt_dir llama-2-7b/ \
+    --tokenizer_path tokenizer.model \
+    --max_seq_len 128 --max_batch_size 4
+```
+
+<Note>
+- Set `--nproc_per_node` to the Model Parallel (MP) value for your model size (7B=1, 13B=2, 70B=8)
+- Adjust `max_seq_len` and `max_batch_size` based on available GPU memory
+</Note>
+
+### Python Code
+
+```python
+from llama import Llama
+from typing import List
+
+# Initialize the model
+generator = Llama.build(
+    ckpt_dir="llama-2-7b/",
+    tokenizer_path="tokenizer.model",
+    max_seq_len=128,
+    max_batch_size=4,
+)
+
+# Define prompts
+prompts: List[str] = [
+    "I believe the meaning of life is",
+    "Simply put, the theory of relativity states that ",
+]
+
+# Generate completions
+results = generator.text_completion(
+    prompts,
+    max_gen_len=64,
+    temperature=0.6,
+    top_p=0.9,
+)
+
+# Print results
+for prompt, result in zip(prompts, results):
+    print(prompt)
+    print(f"> {result['generation']}")
+    print("\n" + "="*34 + "\n")
+```
+
+## Parameters
+
+### Generation Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `temperature` | 0.6 | Controls randomness (0.0 = deterministic, 1.0 = very random) |
+| `top_p` | 0.9 | Nucleus sampling threshold for diversity |
+| `max_gen_len` | 64 | Maximum number of tokens to generate |
+| `max_seq_len` | 128 | Maximum sequence length for input prompts |
+| `max_batch_size` | 4 | Maximum number of prompts to process simultaneously |
+
+### Model Loading Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `ckpt_dir` | Directory containing checkpoint files (e.g., `llama-2-7b/`) |
+| `tokenizer_path` | Path to tokenizer model file |
+| `max_seq_len` | Must be ≤ 4096 tokens |
+| `max_batch_size` | Adjust based on GPU memory |
+
+## Performance Benchmarks
+
+Llama 2 pretrained models performance:
+
+| Benchmark Category | 7B | 13B | 70B |
+|-------------------|-----|-----|-----|
+| **Code** (HumanEval, MBPP) | 16.8 | 24.5 | **37.5** |
+| **Commonsense Reasoning** | 63.9 | 66.9 | **71.9** |
+| **World Knowledge** | 48.9 | 55.4 | **63.6** |
+| **Reading Comprehension** | 61.3 | 65.8 | **69.4** |
+| **Math** (GSM8K, MATH) | 14.6 | 28.7 | **35.2** |
+| **MMLU** | 45.3 | 54.8 | **68.9** |
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Prompt Engineering">
+    - Write prompts that naturally lead to the desired completion
+    - Use few-shot examples to establish patterns
+    - Keep context within the 4096 token limit
+    - Call `strip()` on inputs to avoid double-spaces
+  </Accordion>
+
+  <Accordion title="Performance Optimization">
+    - Set `max_seq_len` to the minimum needed for your use case
+    - Reduce `max_batch_size` if encountering out-of-memory errors
+    - Use appropriate model size: 7B for most tasks, 70B for maximum quality
+    - Lower `temperature` (e.g., 0.2) for more focused outputs
+  </Accordion>
+
+  <Accordion title="Hardware Requirements">
+    - 7B model: Single GPU (model parallel = 1)
+    - 13B model: 2 GPUs (model parallel = 2)
+    - 70B model: 8 GPUs (model parallel = 8)
+    - Memory is pre-allocated based on `max_seq_len` and `max_batch_size`
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Chat Models" icon="comments" href="/models/chat">
+    Learn about fine-tuned chat models for dialogue applications
+  </Card>
+  <Card title="Model Overview" icon="grid" href="/models/overview">
+    Compare all model variants and sizes
+  </Card>
+</CardGroup>

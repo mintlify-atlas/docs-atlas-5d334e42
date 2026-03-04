@@ -1,80 +1,224 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get up and running with Llama 2 in minutes - from installation to running your first inference
 ---
 
-## Get started in three steps
-
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will help you quickly get started with Llama 2, from setup to running your first chat completion.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+Llama 2 models range from 7B to 70B parameters and require sufficient GPU memory. Make sure you have the appropriate hardware for your chosen model size.
 </Note>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- A conda environment with PyTorch and CUDA installed
+- `wget` and `md5sum` utilities (for model downloads)
+- An approved download request from Meta (see Step 1)
+
+## Quick Start Steps
+
+<Steps>
+  <Step title="Request Model Access">
+    Visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and register to download the Llama 2 models.
+    
+    Once approved, you'll receive an email with a signed download URL. Keep this URL handy for Step 4.
+    
+    <Warning>
+    Download links expire after 24 hours and have a download limit. If you encounter `403: Forbidden` errors, request a new link.
+    </Warning>
+  </Step>
+
+  <Step title="Clone and Install">
+    Clone the Llama 2 repository and install the package:
+    
+    ```bash
+    git clone https://github.com/facebookresearch/llama.git
+    cd llama
+    pip install -e .
+    ```
+    
+    This installs the following dependencies:
+    - `torch` - PyTorch framework
+    - `fairscale` - Model parallelism utilities
+    - `fire` - CLI argument parsing
+    - `sentencepiece` - Tokenization
+  </Step>
+
+  <Step title="Download Models">
+    Run the download script to fetch model weights and tokenizer:
+    
+    ```bash
+    chmod +x download.sh
+    ./download.sh
+    ```
+    
+    When prompted:
+    1. **Enter the URL from your email** (manually copy, don't use "Copy Link")
+    2. **Select models to download**: Choose from `7B`, `13B`, `70B`, `7B-chat`, `13B-chat`, `70B-chat`
+       - Press Enter to download all models
+       - Or specify models as comma-separated list: `7B,7B-chat`
+    
+    The script will download:
+    - Model weights (`consolidated.*.pth` files)
+    - Tokenizer (`tokenizer.model`)
+    - Configuration (`params.json`)
+    - License and usage policy files
+  </Step>
+
+  <Step title="Run Your First Chat Completion">
+    Execute the chat completion example with the 7B chat model:
+    
+    ```bash
+    torchrun --nproc_per_node 1 example_chat_completion.py \
+        --ckpt_dir llama-2-7b-chat/ \
+        --tokenizer_path tokenizer.model \
+        --max_seq_len 512 \
+        --max_batch_size 6
+    ```
+    
+    <Accordion title="Understanding the Parameters">
+      - `--nproc_per_node`: Number of GPUs (model parallel value)
+        - 7B models: 1
+        - 13B models: 2
+        - 70B models: 8
+      - `--ckpt_dir`: Path to your downloaded model directory
+      - `--tokenizer_path`: Path to the tokenizer model
+      - `--max_seq_len`: Maximum sequence length (models support up to 4096)
+      - `--max_batch_size`: Batch size (adjust based on GPU memory)
+    </Accordion>
+  </Step>
+</Steps>
+
+## Example Output
+
+The chat completion example includes several pre-configured dialogs. Here's what you can expect:
+
+```python
+dialogs = [
+    [{"role": "user", "content": "what is the recipe of mayonnaise?"}],
+    [
+        {"role": "user", "content": "I am going to Paris, what should I see?"},
+        {"role": "assistant", "content": "Paris has many attractions..."},
+        {"role": "user", "content": "What is so great about #1?"}
+    ],
+    [
+        {"role": "system", "content": "Always answer with Haiku"},
+        {"role": "user", "content": "I am going to Paris, what should I see?"}
+    ]
+]
+```
+
+Each dialog demonstrates different capabilities:
+- Single-turn conversations
+- Multi-turn conversations with context
+- System prompts for behavior control
+
+## Running Text Completion
+
+For pretrained (non-chat) models, use text completion instead:
+
+```bash
+torchrun --nproc_per_node 1 example_text_completion.py \
+    --ckpt_dir llama-2-7b/ \
+    --tokenizer_path tokenizer.model \
+    --max_seq_len 128 \
+    --max_batch_size 4
+```
+
+<Note>
+Pretrained models are not fine-tuned for chat. Prompt them so the expected answer is the natural continuation of your prompt.
+</Note>
+
+### Text Completion Examples
+
+The example includes various prompt types:
+
+<CodeGroup>
+```python Completion Prompt
+prompts = [
+    "I believe the meaning of life is",
+    "Simply put, the theory of relativity states that "
+]
+```
+
+```python Few-Shot Translation
+prompt = """Translate English to French:
+
+sea otter => loutre de mer
+peppermint => menthe poivrée
+plush girafe => girafe peluche
+cheese =>"""
+```
+</CodeGroup>
+
+## Customizing Generation
+
+Both examples support tuning generation parameters:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `temperature` | 0.6 | Controls randomness (0.0 = deterministic, 1.0 = creative) |
+| `top_p` | 0.9 | Nucleus sampling threshold for diversity |
+| `max_gen_len` | Model default | Maximum tokens to generate |
+
+Example with custom parameters:
+
+```bash
+torchrun --nproc_per_node 1 example_chat_completion.py \
+    --ckpt_dir llama-2-7b-chat/ \
+    --tokenizer_path tokenizer.model \
+    --temperature 0.8 \
+    --top_p 0.95 \
+    --max_seq_len 512 \
+    --max_batch_size 6
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation Guide" icon="download" href="/installation">
+    Detailed setup instructions, prerequisites, and troubleshooting
+  </Card>
+  
+  <Card title="Llama Cookbook" icon="book" href="https://github.com/facebookresearch/llama-recipes">
+    Advanced examples with Hugging Face integration
+  </Card>
+  
+  <Card title="Model Card" icon="id-card" href="https://github.com/facebookresearch/llama/blob/main/MODEL_CARD.md">
+    Model specifications and performance benchmarks
+  </Card>
+  
+  <Card title="Responsible Use" icon="shield" href="https://github.com/facebookresearch/llama/blob/main/Responsible-Use-Guide.pdf">
+    Guidelines for safe and ethical AI deployment
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="403 Forbidden error during download">
+    Your download link has expired. Links are valid for 24 hours and limited downloads. Request a new URL from the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads/).
+  </Accordion>
+  
+  <Accordion title="Out of memory error">
+    Reduce `max_seq_len` and `max_batch_size` parameters. The cache is pre-allocated based on these values, so adjust according to your GPU memory:
+    
+    ```bash
+    # For limited GPU memory
+    torchrun --nproc_per_node 1 example_chat_completion.py \
+        --ckpt_dir llama-2-7b-chat/ \
+        --tokenizer_path tokenizer.model \
+        --max_seq_len 256 \
+        --max_batch_size 2
+    ```
+  </Accordion>
+  
+  <Accordion title="Wrong nproc_per_node value">
+    Ensure `--nproc_per_node` matches the model parallel (MP) requirements:
+    - 7B models: `--nproc_per_node 1`
+    - 13B models: `--nproc_per_node 2`
+    - 70B models: `--nproc_per_node 8`
+  </Accordion>
+</AccordionGroup>
