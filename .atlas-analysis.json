@@ -1,0 +1,109 @@
+{
+  "projectType": "ai-ml",
+  "projectName": "Llama 2",
+  "projectDescription": "Inference code for Llama 2 large language models from Meta",
+  "theme": "aspen",
+  "primaryColor": "#0084ff",
+  "lightColor": "#4db8ff",
+  "darkColor": "#0066cc",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Model Usage",
+            "pages": [
+              "usage/text-completion",
+              "usage/chat-completion",
+              "usage/model-parallel"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/architecture",
+              "concepts/tokenization",
+              "concepts/generation"
+            ]
+          },
+          {
+            "group": "Model Variants",
+            "pages": [
+              "models/overview",
+              "models/pretrained",
+              "models/chat"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core Classes",
+            "pages": [
+              "api/llama",
+              "api/tokenizer",
+              "api/transformer"
+            ]
+          },
+          {
+            "group": "Model Components",
+            "pages": [
+              "api/model-args",
+              "api/attention",
+              "api/feedforward"
+            ]
+          },
+          {
+            "group": "Types",
+            "pages": [
+              "api/types"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Resources",
+        "groups": [
+          {
+            "group": "Additional Information",
+            "pages": [
+              "resources/model-card",
+              "resources/responsible-use",
+              "resources/license"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Pre-trained and fine-tuned LLM inference (7B-70B parameters)",
+    "Text completion with customizable sampling (temperature, top-p)",
+    "Chat completion with dialogue context and system prompts",
+    "Multi-GPU model parallelism with FairScale",
+    "Optimized transformer architecture with grouped-query attention",
+    "SentencePiece tokenization with special token handling"
+  ],
+  "publicApiSurface": [
+    "Llama.build() - Initialize and load pre-trained model",
+    "Llama.generate() - Generate token sequences from prompts",
+    "Llama.text_completion() - Text completion for prompts",
+    "Llama.chat_completion() - Generate chat responses for dialogs",
+    "Tokenizer.encode() - Encode string to token IDs",
+    "Tokenizer.decode() - Decode token IDs to string",
+    "Transformer - Main transformer model class",
+    "ModelArgs - Model configuration dataclass",
+    "Dialog, Message, CompletionPrediction, ChatPrediction - Type definitions"
+  ]
+}
